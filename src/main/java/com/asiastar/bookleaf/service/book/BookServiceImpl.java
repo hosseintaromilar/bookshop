@@ -8,12 +8,13 @@ import com.asiastar.bookleaf.repository.BookRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static org.hibernate.Hibernate.map;
 
 @Service
 public class BookServiceImpl implements BookService{
@@ -61,8 +62,25 @@ public class BookServiceImpl implements BookService{
 
     @Override
     public BookResponse findById(Long id) {
-        Book book =  bookRepository.findById(id).orElseThrow(()->new RuleException("book.not.found"));
-         return createBookResponse(book);
+         return createBookResponse(findByIdreturnBook(id));
+    }
+
+    @Override
+    @Transactional
+    public void deleted(Long id) {
+        Book ById = findByIdreturnBook(id);
+
+        //first approach to delete an entry from book database: hard delete
+       // bookRepository.delete(ById); THIS LINE IS DELETED BECAUSE IT HARD DELETES THE BOOK ENTRY FROM THE DATABASE
+
+        //second approach to delete an entry from database: soft delete
+        //ById.setDeleted(LocalDateTime.now());
+        // bookRepository.save(ById);  WE COMMENT THIS LINE AND INSTEAD WE CAN USE AN ANNOTATION CALLED @Transactional
+
+        // this time we are using this line along with the
+        // annotation @sqldelete in book class.this way it
+        // does not  hard delete the book entry.
+        bookRepository.delete(ById);
     }
 
     private Book createBook(BookRequest bookRequest){
@@ -82,4 +100,10 @@ public class BookServiceImpl implements BookService{
                 .price(book.getPrice())
                 .build();
     }
+
+    private Book findByIdreturnBook(Long id){
+        return bookRepository.findById(id).orElseThrow(()->new RuleException("book.not.found"));
+
+    }
+
 }
